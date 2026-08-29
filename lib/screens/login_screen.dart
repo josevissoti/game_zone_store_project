@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'register_screen.dart';
+import '../services/auth_service.dart';
 import '../utils/validators.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
@@ -15,9 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -26,15 +28,26 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      Future.delayed(const Duration(seconds: 1), () {
+      try {
+        await _authService.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
         if (mounted) {
-          setState(() => _isLoading = false);
           _showSuccessSnackBar('Login realizado com sucesso!');
         }
-      });
+      } on FirebaseAuthException catch (e) {
+        if (mounted) {
+          _showErrorSnackBar(_authService.getAuthErrorMessage(e));
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -43,6 +56,24 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(message, style: GameZoneTypography.bodyMedium),
         backgroundColor: GameZoneColors.surfaceElevated,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GameZoneRadius.lg),
+        ),
+        margin: const EdgeInsets.all(GameZoneSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: GameZoneSpacing.lg,
+          vertical: GameZoneSpacing.md,
+        ),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GameZoneTypography.bodyMedium),
+        backgroundColor: GameZoneColors.borderError.withValues(alpha: 0.2),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GameZoneRadius.lg),
@@ -107,12 +138,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: Validators.validatePassword,
                       ),
                       const SizedBox(height: GameZoneSpacing.md),
-                      Row(
-                        children: [
-                          _buildRememberMe(),
-                          const Spacer(),
-                          _buildForgotPassword(),
-                        ],
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _buildForgotPassword(),
                       ),
                       const SizedBox(height: GameZoneSpacing.lg),
                       AuthButton(
@@ -120,28 +148,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _login,
                         isLoading: _isLoading,
                         icon: Icons.login_rounded,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.xl),
-                      DividerWithText(text: 'ou continue com'),
-                      const SizedBox(height: GameZoneSpacing.lg),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SocialButton(
-                              icon: Icons.g_mobiledata_rounded,
-                              label: 'Google',
-                              onPressed: () {},
-                            ),
-                          ),
-                          const SizedBox(width: GameZoneSpacing.md),
-                          Expanded(
-                            child: SocialButton(
-                              icon: Icons.apple_rounded,
-                              label: 'Apple',
-                              onPressed: () {},
-                            ),
-                          ),
-                        ],
                       ),
                       const SizedBox(height: GameZoneSpacing.xl),
                       AuthFooter(
@@ -178,47 +184,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildRememberMe() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _rememberMe = !_rememberMe),
-          child: AnimatedContainer(
-            duration: GameZoneAnimations.fast,
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(GameZoneRadius.sm),
-              gradient: _rememberMe ? GameZoneColors.primaryGradient : null,
-              color: _rememberMe ? null : GameZoneColors.surface,
-              border: Border.all(
-                color: _rememberMe
-                    ? Colors.transparent
-                    : GameZoneColors.border,
-                width: 1.5,
-              ),
-            ),
-            child: _rememberMe
-                ? const Icon(
-                    Icons.check_rounded,
-                    size: 16,
-                    color: GameZoneColors.textOnPrimary,
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: GameZoneSpacing.sm),
-        Text(
-          'Lembrar-me',
-          style: GameZoneTypography.bodyMedium.copyWith(
-            color: GameZoneColors.textSecondary,
-          ),
-        ),
-      ],
     );
   }
 

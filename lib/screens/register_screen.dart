@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import '../utils/validators.dart';
 import '../utils/formatters.dart';
 import '../utils/design_tokens.dart';
@@ -19,10 +21,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _authService = AuthService();
+  final _userService = UserService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  bool _acceptTerms = false;
 
   @override
   void dispose() {
@@ -34,31 +37,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
+  Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
-      if (!_acceptTerms) {
-        _showErrorSnackBar('Você deve aceitar os termos de uso');
-        return;
-      }
       setState(() => _isLoading = true);
-      Future.delayed(const Duration(seconds: 1), () {
+      try {
+        await _authService.registerWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+          phone: _phoneController.text,
+        );
+        // Fazer logout automático para forçar login após cadastro
+        await _authService.signOut();
+        if (mounted) {
+          _showSuccessSnackBar('Conta criada com sucesso! Faça login para continuar.');
+          Navigator.pop(context); // Volta para LoginScreen
+        }
+      } on FirebaseAuthException catch (e) {
+        if (mounted) {
+          _showErrorSnackBar(_authService.getAuthErrorMessage(e));
+        }
+      } on FirebaseException catch (e) {
+        if (mounted) {
+          _showErrorSnackBar(_userService.getFirestoreErrorMessage(e));
+        }
+      } finally {
         if (mounted) {
           setState(() => _isLoading = false);
-          _showSuccessSnackBar('Conta criada com sucesso!');
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const LoginScreen(),
-              transitionsBuilder: (_, animation, __, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
-              },
-              transitionDuration: GameZoneAnimations.normal,
-            ),
-          );
         }
-      });
+      }
     }
   }
 
@@ -199,36 +206,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _passwordController.text,
                         ),
                       ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      _buildTermsCheckbox(),
                       const SizedBox(height: GameZoneSpacing.lg),
                       AuthButton(
                         text: 'Cadastrar',
                         onPressed: _register,
                         isLoading: _isLoading,
                         icon: Icons.person_add_rounded,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.xl),
-                      DividerWithText(text: 'ou cadastre-se com'),
-                      const SizedBox(height: GameZoneSpacing.lg),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SocialButton(
-                              icon: Icons.g_mobiledata_rounded,
-                              label: 'Google',
-                              onPressed: () {},
-                            ),
-                          ),
-                          const SizedBox(width: GameZoneSpacing.md),
-                          Expanded(
-                            child: SocialButton(
-                              icon: Icons.apple_rounded,
-                              label: 'Apple',
-                              onPressed: () {},
-                            ),
-                          ),
-                        ],
                       ),
                       const SizedBox(height: GameZoneSpacing.xl),
                       AuthFooter(
@@ -244,88 +227,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTermsCheckbox() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _acceptTerms = !_acceptTerms),
-          child: AnimatedContainer(
-            duration: GameZoneAnimations.fast,
-            margin: const EdgeInsets.only(top: 2),
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(GameZoneRadius.sm),
-              gradient: _acceptTerms ? GameZoneColors.primaryGradient : null,
-              color: _acceptTerms ? null : GameZoneColors.surface,
-              border: Border.all(
-                color: _acceptTerms
-                    ? Colors.transparent
-                    : GameZoneColors.border,
-                width: 1.5,
-              ),
-            ),
-            child: _acceptTerms
-                ? const Icon(
-                    Icons.check_rounded,
-                    size: 16,
-                    color: GameZoneColors.textOnPrimary,
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: GameZoneSpacing.sm),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: GameZoneTypography.bodySmall.copyWith(
-                color: GameZoneColors.textSecondary,
-                height: 1.5,
-              ),
-              children: [
-                const TextSpan(text: 'Concordo com os '),
-                WidgetSpan(
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: ShaderMask(
-                      shaderCallback: (bounds) => GameZoneColors.primaryGradient
-                          .createShader(bounds),
-                      child: Text(
-                        'Termos de Uso',
-                        style: GameZoneTypography.bodySmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const TextSpan(text: ' e a '),
-                WidgetSpan(
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: ShaderMask(
-                      shaderCallback: (bounds) => GameZoneColors.primaryGradient
-                          .createShader(bounds),
-                      child: Text(
-                        'Política de Privacidade',
-                        style: GameZoneTypography.bodySmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
