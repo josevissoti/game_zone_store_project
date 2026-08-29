@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   final UserService userService;
   final AuthService authService;
 
@@ -74,28 +74,69 @@ class HomeTab extends StatelessWidget {
   });
 
   @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  UserModel? _initialUserModel;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialUser();
+  }
+
+  Future<void> _loadInitialUser() async {
+    final user = widget.authService.currentUser;
+    if (user == null) return;
+
+    try {
+      final userModel = await widget.userService.getUserOrCreate(
+        uid: user.uid,
+        name: user.displayName ?? 'Usuário',
+        phone: '',
+        email: user.email ?? '',
+      );
+      if (mounted) {
+        setState(() {
+          _initialUserModel = userModel;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = authService.currentUser;
+    final user = widget.authService.currentUser;
 
     if (user == null) {
       return const Center(child: Text('Usuário não autenticado'));
     }
 
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: GameZoneColors.primaryCyan),
+      );
+    }
+
     return StreamBuilder<UserModel>(
-      stream: userService.watchUserOrCreate(
-        uid: user.uid,
-        name: user.displayName ?? 'Usuário',
-        phone: '',
-        email: user.email ?? '',
-      ),
+      stream: widget.userService.watchUser(user.uid),
+      initialData: _initialUserModel,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            _initialUserModel == null) {
           return const Center(
             child: CircularProgressIndicator(color: GameZoneColors.primaryCyan),
           );
         }
 
-        final userName = snapshot.data?.name ?? 'Usuário';
+        final userName = snapshot.data?.name ?? _initialUserModel?.name ?? 'Usuário';
         final firstName = userName.split(' ').first;
 
         return CustomScrollView(
@@ -326,6 +367,42 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   int _retryKey = 0;
+  UserModel? _initialUserModel;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialUser();
+  }
+
+  Future<void> _loadInitialUser() async {
+    final user = widget.authService.currentUser;
+    if (user == null) return;
+
+    final displayName = user.displayName ?? '';
+    final email = user.email ?? '';
+    final phone = '';
+
+    try {
+      final userModel = await widget.userService.getUserOrCreate(
+        uid: user.uid,
+        name: displayName.isNotEmpty ? displayName : 'Usuário',
+        phone: phone,
+        email: email,
+      );
+      if (mounted) {
+        setState(() {
+          _initialUserModel = userModel;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,21 +412,18 @@ class _ProfileTabState extends State<ProfileTab> {
       return const Center(child: Text('Usuário não autenticado'));
     }
 
-    // Obter dados do usuário do Firebase Auth para criar perfil se necessário
-    final displayName = user.displayName ?? '';
-    final email = user.email ?? '';
-    // Phone não está disponível no Firebase Auth User, usar placeholder
-    final phone = '';
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: GameZoneColors.primaryCyan),
+      );
+    }
 
     return StreamBuilder<UserModel>(
-      stream: widget.userService.watchUserOrCreate(
-        uid: user.uid,
-        name: displayName.isNotEmpty ? displayName : 'Usuário',
-        phone: phone,
-        email: email,
-      ),
+      stream: widget.userService.watchUser(user.uid),
+      initialData: _initialUserModel,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            _initialUserModel == null) {
           return const Center(
             child: CircularProgressIndicator(color: GameZoneColors.primaryCyan),
           );
@@ -393,7 +467,7 @@ class _ProfileTabState extends State<ProfileTab> {
           );
         }
 
-        final userModel = snapshot.data;
+        final userModel = snapshot.data ?? _initialUserModel;
 
         if (userModel == null) {
           return const Center(

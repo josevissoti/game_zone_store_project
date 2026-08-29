@@ -1,7 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'user_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final UserService _userService = UserService();
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -28,9 +31,45 @@ class AuthService {
       password: password,
     );
 
-    // Perfil será criado lazy no primeiro acesso (UserService.getUserOrCreate)
-    // Armazenar dados temporários para uso posterior se necessário
+    // Atualizar displayName no Firebase Auth
+    if (credential.user != null) {
+      await credential.user!.updateDisplayName(name.trim());
+      await credential.user!.reload();
+    }
+
+    // Criar perfil no Firestore com retry (race condition do token)
+    if (credential.user != null) {
+      await _createUserProfileWithRetry(
+        uid: credential.user!.uid,
+        name: name.trim(),
+        phone: phone,
+        email: email.trim().toLowerCase(),
+      );
+    }
+
     return credential;
+  }
+
+  Future<void> _createUserProfileWithRetry({
+    required String uid,
+    required String name,
+    required String phone,
+    required String email,
+    int maxRetries = 3,
+  }) async {
+    for (int i = 0; i < maxRetries; i++) {
+      try {
+        await _userService.createUserProfile(uid, name, phone, email);
+        return; // Sucesso
+      } on FirebaseException catch (e) {
+        if (e.code == 'permission-denied' && i < maxRetries - 1) {
+          await Future.delayed(Duration(milliseconds: 500 * (i + 1))); // 500ms, 1s, 1.5s
+          await _auth.currentUser?.reload(); // Atualiza token
+          continue;
+        }
+        rethrow;
+      }
+    }
   }
 
   Future<void> signOut() async {

@@ -54,7 +54,7 @@ class UserService {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-    await _users.doc(uid).set(user.toMap());
+    await _users.doc(uid).set(user.toMap(), SetOptions(merge: true));
   }
 
   Future<void> updateUser(String uid, {String? name, String? phone}) async {
