@@ -6,6 +6,7 @@ import '../utils/validators.dart';
 import '../utils/formatters.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
+import '../utils/snackbar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -50,16 +51,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // Fazer logout automático para forçar login após cadastro
         await _authService.signOut();
         if (mounted) {
-          _showSuccessSnackBar('Conta criada com sucesso! Faça login para continuar.');
+          showSnackBar(context, message: 'Conta criada com sucesso! Faça login para continuar.', type: SnackBarType.success);
           Navigator.pop(context); // Volta para LoginScreen
         }
       } on FirebaseAuthException catch (e) {
         if (mounted) {
-          _showErrorSnackBar(_authService.getAuthErrorMessage(e));
+          showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
         }
       } on FirebaseException catch (e) {
         if (mounted) {
-          _showErrorSnackBar(_userService.getFirestoreErrorMessage(e));
+          showSnackBar(context, message: _userService.getFirestoreErrorMessage(e), type: SnackBarType.error);
         }
       } finally {
         if (mounted) {
@@ -67,42 +68,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
     }
-  }
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GameZoneTypography.bodyMedium),
-        backgroundColor: GameZoneColors.surfaceElevated,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-        ),
-        margin: const EdgeInsets.all(GameZoneSpacing.md),
-        padding: const EdgeInsets.symmetric(
-          horizontal: GameZoneSpacing.lg,
-          vertical: GameZoneSpacing.md,
-        ),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GameZoneTypography.bodyMedium),
-        backgroundColor: GameZoneColors.borderError.withValues(alpha: 0.2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-        ),
-        margin: const EdgeInsets.all(GameZoneSpacing.md),
-        padding: const EdgeInsets.symmetric(
-          horizontal: GameZoneSpacing.lg,
-          vertical: GameZoneSpacing.md,
-        ),
-      ),
-    );
   }
 
   @override
@@ -113,115 +78,131 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           _buildBackground(),
           SafeArea(
-            child: SingleChildScrollView(
-              child: AuthCard(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AuthCardHeader(
-                        title: 'Criar conta',
-                        subtitle: 'Preencha seus dados para começar',
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        action: IconButton(
-                          icon: const Icon(Icons.close_rounded, color: GameZoneColors.textSecondary),
-                          onPressed: () => Navigator.pop(context),
-                          style: IconButton.styleFrom(
-                            backgroundColor: GameZoneColors.surface,
-                            padding: const EdgeInsets.all(GameZoneSpacing.sm),
+            child: Center(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: GameZoneSpacing.lg,
+                      vertical: GameZoneSpacing.xl,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: AuthCard(
+                          showTopAccent: false,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                AuthCardHeader(
+                                  title: 'Criar conta',
+                                  subtitle: 'Preencha seus dados para começar',
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  action: IconButton(
+                                    icon: const Icon(Icons.close_rounded, color: GameZoneColors.textSecondary),
+                                    onPressed: () => Navigator.pop(context),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: GameZoneColors.surface,
+                                      padding: const EdgeInsets.all(GameZoneSpacing.sm),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: GameZoneSpacing.xl),
+                                AuthTextField(
+                                  controller: _nameController,
+                                  label: 'Nome completo',
+                                  hint: 'João da Silva',
+                                  prefixIcon: Icons.person_outline_rounded,
+                                  textCapitalization: TextCapitalization.words,
+                                  validator: Validators.validateName,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.md),
+                                AuthTextField(
+                                  controller: _phoneController,
+                                  label: 'Telefone',
+                                  hint: '(11) 99999-9999',
+                                  prefixIcon: Icons.phone_outlined,
+                                  keyboardType: TextInputType.phone,
+                                  inputFormatters: [PhoneFormatter()],
+                                  validator: Validators.validatePhone,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.md),
+                                AuthTextField(
+                                  controller: _emailController,
+                                  label: 'E-mail',
+                                  hint: 'seu@email.com',
+                                  prefixIcon: Icons.email_outlined,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: Validators.validateEmail,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.md),
+                                AuthTextField(
+                                  controller: _passwordController,
+                                  label: 'Senha',
+                                  hint: 'Mín. 8 caracteres',
+                                  prefixIcon: Icons.lock_outline_rounded,
+                                  obscureText: _obscurePassword,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
+                                      size: 22,
+                                      color: GameZoneColors.textMuted,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _obscurePassword = !_obscurePassword),
+                                  ),
+                                  validator: Validators.validatePassword,
+                                  onChanged: (_) => _confirmPasswordController.clear(),
+                                ),
+                                const SizedBox(height: GameZoneSpacing.md),
+                                AuthTextField(
+                                  controller: _confirmPasswordController,
+                                  label: 'Confirmar senha',
+                                  hint: 'Digite novamente',
+                                  prefixIcon: Icons.lock_outline_rounded,
+                                  obscureText: _obscureConfirmPassword,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
+                                      size: 22,
+                                      color: GameZoneColors.textMuted,
+                                    ),
+                                    onPressed: () => setState(
+                                        () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                  ),
+                                  validator: (value) => Validators.validateConfirmPassword(
+                                    value,
+                                    _passwordController.text,
+                                  ),
+                                ),
+                                const SizedBox(height: GameZoneSpacing.lg),
+                                AuthButton(
+                                  text: 'Cadastrar',
+                                  onPressed: _register,
+                                  isLoading: _isLoading,
+                                  icon: Icons.person_add_rounded,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.xl),
+                                AuthFooter(
+                                  text: 'Já tem uma conta?',
+                                  actionText: 'Faça login',
+                                  onActionPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: GameZoneSpacing.xl),
-                      AuthTextField(
-                        controller: _nameController,
-                        label: 'Nome completo',
-                        hint: 'João da Silva',
-                        prefixIcon: Icons.person_outline_rounded,
-                        textCapitalization: TextCapitalization.words,
-                        validator: Validators.validateName,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      AuthTextField(
-                        controller: _phoneController,
-                        label: 'Telefone',
-                        hint: '(11) 99999-9999',
-                        prefixIcon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [PhoneFormatter()],
-                        validator: Validators.validatePhone,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      AuthTextField(
-                        controller: _emailController,
-                        label: 'E-mail',
-                        hint: 'seu@email.com',
-                        prefixIcon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: Validators.validateEmail,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      AuthTextField(
-                        controller: _passwordController,
-                        label: 'Senha',
-                        hint: 'Mín. 8 caracteres',
-                        prefixIcon: Icons.lock_outline_rounded,
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            size: 22,
-                            color: GameZoneColors.textMuted,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
-                        ),
-                        validator: Validators.validatePassword,
-                        onChanged: (_) => _confirmPasswordController.clear(),
-                      ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      AuthTextField(
-                        controller: _confirmPasswordController,
-                        label: 'Confirmar senha',
-                        hint: 'Digite novamente',
-                        prefixIcon: Icons.lock_outline_rounded,
-                        obscureText: _obscureConfirmPassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            size: 22,
-                            color: GameZoneColors.textMuted,
-                          ),
-                          onPressed: () => setState(
-                              () => _obscureConfirmPassword = !_obscureConfirmPassword),
-                        ),
-                        validator: (value) => Validators.validateConfirmPassword(
-                          value,
-                          _passwordController.text,
-                        ),
-                      ),
-                      const SizedBox(height: GameZoneSpacing.lg),
-                      AuthButton(
-                        text: 'Cadastrar',
-                        onPressed: _register,
-                        isLoading: _isLoading,
-                        icon: Icons.person_add_rounded,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.xl),
-                      AuthFooter(
-                        text: 'Já tem uma conta?',
-                        actionText: 'Faça login',
-                        onActionPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),

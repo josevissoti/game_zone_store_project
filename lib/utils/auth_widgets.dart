@@ -223,6 +223,11 @@ class _AuthTextFieldState extends State<AuthTextField>
         widget.validator!(widget.controller.text) != null &&
         (widget.controller.text.isNotEmpty || _isFocused);
 
+    // Label is in "floating" position when focused or has content
+    // In that case, we want to hide the hint (cross-fade out)
+    // When label is in placeholder position (not focused, no content), show hint
+    final showHint = !_isFocused && !_hasContent;
+
     return AnimatedBuilder(
       animation: _focusController,
       builder: (context, child) {
@@ -274,7 +279,9 @@ class _AuthTextFieldState extends State<AuthTextField>
                     decoration: InputDecoration(
                       hintText: widget.hint,
                       hintStyle: GameZoneTypography.bodyMedium.copyWith(
-                        color: GameZoneColors.textMuted,
+                        color: GameZoneColors.textMuted.withValues(
+                          alpha: showHint ? 1.0 : 0.0,
+                        ),
                       ),
                       prefixIcon: Padding(
                         padding: const EdgeInsets.all(GameZoneSpacing.md),
@@ -365,6 +372,7 @@ class AuthButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isSecondary;
+  final bool isCoral;
   final IconData? icon;
   final double? width;
 
@@ -374,6 +382,7 @@ class AuthButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.isSecondary = false,
+    this.isCoral = false,
     this.icon,
     this.width,
   });
@@ -383,7 +392,7 @@ class AuthButton extends StatelessWidget {
     return SizedBox(
       width: width ?? double.infinity,
       height: 56,
-      child: isSecondary ? _buildSecondary() : _buildPrimary(),
+      child: isSecondary ? _buildSecondary() : (isCoral ? _buildCoral() : _buildPrimary()),
     );
   }
 
@@ -403,6 +412,63 @@ class AuthButton extends StatelessWidget {
               ),
         boxShadow: onPressed != null && !isLoading
             ? GameZoneShadows.button
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isLoading ? null : onPressed,
+          borderRadius: BorderRadius.circular(GameZoneRadius.lg),
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.lg),
+            child: isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 20, color: GameZoneColors.textOnPrimary),
+                        const SizedBox(width: GameZoneSpacing.sm),
+                      ],
+                      Text(
+                        text,
+                        style: GameZoneTypography.titleLarge.copyWith(
+                          color: GameZoneColors.textOnPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoral() {
+    return AnimatedContainer(
+      duration: GameZoneAnimations.normal,
+      curve: GameZoneAnimations.standard,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(GameZoneRadius.lg),
+        gradient: onPressed != null && !isLoading
+            ? GameZoneColors.coralGradient
+            : LinearGradient(
+                colors: [
+                  GameZoneColors.accentCoral.withValues(alpha: 0.4),
+                  GameZoneColors.accentCoralDark.withValues(alpha: 0.4),
+                ],
+              ),
+        boxShadow: onPressed != null && !isLoading
+            ? GameZoneShadows.coralButton
             : null,
       ),
       child: Material(
@@ -544,90 +610,6 @@ class AuthFooter extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class DividerWithText extends StatelessWidget {
-  final String text;
-
-  const DividerWithText({super.key, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(
-          child: Divider(
-            color: GameZoneColors.border,
-            thickness: 1,
-            height: 1,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.md),
-          child: Text(
-            text,
-            style: GameZoneTypography.labelSmall.copyWith(
-              color: GameZoneColors.textMuted,
-            ),
-          ),
-        ),
-        const Expanded(
-          child: Divider(
-            color: GameZoneColors.border,
-            thickness: 1,
-            height: 1,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class SocialButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-  final Color? borderColor;
-
-  const SocialButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    this.onPressed,
-    this.borderColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: borderColor ?? GameZoneColors.border,
-            width: 1.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-          ),
-          backgroundColor: GameZoneColors.surface,
-          foregroundColor: GameZoneColors.textPrimary,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 22, color: GameZoneColors.textSecondary),
-            const SizedBox(width: GameZoneSpacing.md),
-            Text(
-              label,
-              style: GameZoneTypography.titleMedium,
             ),
           ],
         ),

@@ -7,12 +7,6 @@ class UserService {
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
 
-  Future<UserModel?> getUser(String uid) async {
-    final doc = await _users.doc(uid).get();
-    if (!doc.exists) return null;
-    return UserModel.fromMap(doc.data()!);
-  }
-
   /// Obtém o usuário ou cria o perfil se não existir (lazy creation)
   Future<UserModel> getUserOrCreate({
     required String uid,
@@ -70,31 +64,6 @@ class UserService {
     return _users.doc(uid).snapshots().map((doc) {
       if (!doc.exists) {
         throw Exception('Usuário não encontrado');
-      }
-      return UserModel.fromMap(doc.data()!);
-    });
-  }
-
-  /// Stream que cria o perfil automaticamente se não existir
-  Stream<UserModel> watchUserOrCreate({
-    required String uid,
-    required String name,
-    required String phone,
-    required String email,
-  }) {
-    return _users.doc(uid).snapshots().asyncMap((doc) async {
-      if (!doc.exists) {
-        // Criar perfil automaticamente
-        final user = UserModel(
-          uid: uid,
-          name: name,
-          phone: phone,
-          email: email,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        await doc.reference.set(user.toMap());
-        return user;
       }
       return UserModel.fromMap(doc.data()!);
     });

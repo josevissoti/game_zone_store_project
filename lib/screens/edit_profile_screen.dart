@@ -7,6 +7,7 @@ import '../utils/validators.dart';
 import '../utils/formatters.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
+import '../utils/snackbar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserService userService;
@@ -77,47 +78,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           phone: _phoneController.text,
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Perfil atualizado com sucesso!',
-                style: GameZoneTypography.bodyMedium,
-              ),
-              backgroundColor: GameZoneColors.surfaceElevated,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-              ),
-              margin: const EdgeInsets.all(GameZoneSpacing.md),
-              padding: const EdgeInsets.symmetric(
-                horizontal: GameZoneSpacing.lg,
-                vertical: GameZoneSpacing.md,
-              ),
-            ),
-          );
+          showSnackBar(context, message: 'Perfil atualizado com sucesso!', type: SnackBarType.success);
           Navigator.pop(context);
         }
       }
     } on FirebaseException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.userService.getFirestoreErrorMessage(e),
-              style: GameZoneTypography.bodyMedium,
-            ),
-            backgroundColor: GameZoneColors.borderError.withValues(alpha: 0.2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-            ),
-            margin: const EdgeInsets.all(GameZoneSpacing.md),
-            padding: const EdgeInsets.symmetric(
-              horizontal: GameZoneSpacing.lg,
-              vertical: GameZoneSpacing.md,
-            ),
-          ),
-        );
+        showSnackBar(context, message: widget.userService.getFirestoreErrorMessage(e), type: SnackBarType.error);
       }
     } finally {
       if (mounted) {

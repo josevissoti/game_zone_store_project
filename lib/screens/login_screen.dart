@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../utils/validators.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
+import '../utils/snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,11 +38,11 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _passwordController.text,
         );
         if (mounted) {
-          _showSuccessSnackBar('Login realizado com sucesso!');
+          showSnackBar(context, message: 'Login realizado com sucesso!', type: SnackBarType.success);
         }
       } on FirebaseAuthException catch (e) {
         if (mounted) {
-          _showErrorSnackBar(_authService.getAuthErrorMessage(e));
+          showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
         }
       } finally {
         if (mounted) {
@@ -49,42 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     }
-  }
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GameZoneTypography.bodyMedium),
-        backgroundColor: GameZoneColors.surfaceElevated,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-        ),
-        margin: const EdgeInsets.all(GameZoneSpacing.md),
-        padding: const EdgeInsets.symmetric(
-          horizontal: GameZoneSpacing.lg,
-          vertical: GameZoneSpacing.md,
-        ),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GameZoneTypography.bodyMedium),
-        backgroundColor: GameZoneColors.borderError.withValues(alpha: 0.2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-        ),
-        margin: const EdgeInsets.all(GameZoneSpacing.md),
-        padding: const EdgeInsets.symmetric(
-          horizontal: GameZoneSpacing.lg,
-          vertical: GameZoneSpacing.md,
-        ),
-      ),
-    );
   }
 
   @override
@@ -95,90 +60,106 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           _buildBackground(),
           SafeArea(
-            child: SingleChildScrollView(
-              child: AuthCard(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AuthCardHeader(
-                        title: 'Bem-vindo de volta',
-                        subtitle: 'Entre na sua conta GameZone',
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.xl),
-                      AuthTextField(
-                        controller: _emailController,
-                        label: 'E-mail',
-                        hint: 'seu@email.com',
-                        prefixIcon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: Validators.validateEmail,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      AuthTextField(
-                        controller: _passwordController,
-                        label: 'Senha',
-                        hint: '********',
-                        prefixIcon: Icons.lock_outline_rounded,
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            size: 22,
-                            color: GameZoneColors.textMuted,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
-                        ),
-                        validator: Validators.validatePassword,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.md),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: _buildForgotPassword(),
-                      ),
-                      const SizedBox(height: GameZoneSpacing.lg),
-                      AuthButton(
-                        text: 'Entrar',
-                        onPressed: _login,
-                        isLoading: _isLoading,
-                        icon: Icons.login_rounded,
-                      ),
-                      const SizedBox(height: GameZoneSpacing.xl),
-                      AuthFooter(
-                        text: 'Não tem uma conta?',
-                        actionText: 'Cadastre-se',
-                        onActionPressed: () {
-                          Navigator.of(context).push(
-                            PageRouteBuilder(
-                              pageBuilder: (_, __, ___) => const RegisterScreen(),
-                              transitionsBuilder: (_, animation, __, child) {
-                                return SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(1, 0),
-                                    end: Offset.zero,
-                                  ).animate(
-                                    CurvedAnimation(
-                                      parent: animation,
-                                      curve: GameZoneAnimations.emphasized,
+            child: Center(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: GameZoneSpacing.lg,
+                      vertical: GameZoneSpacing.xl,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: AuthCard(
+                          showTopAccent: false,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                AuthCardHeader(
+                                  title: 'Bem-vindo de volta',
+                                  subtitle: 'Entre na sua conta GameZone',
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.xl),
+                                AuthTextField(
+                                  controller: _emailController,
+                                  label: 'E-mail',
+                                  hint: 'seu@email.com',
+                                  prefixIcon: Icons.email_outlined,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: Validators.validateEmail,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.md),
+                                AuthTextField(
+                                  controller: _passwordController,
+                                  label: 'Senha',
+                                  hint: '********',
+                                  prefixIcon: Icons.lock_outline_rounded,
+                                  obscureText: _obscurePassword,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
+                                      size: 22,
+                                      color: GameZoneColors.textMuted,
                                     ),
+                                    onPressed: () =>
+                                        setState(() => _obscurePassword = !_obscurePassword),
                                   ),
-                                  child: child,
-                                );
-                              },
-                              transitionDuration: GameZoneAnimations.page,
+                                  validator: Validators.validatePassword,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.md),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: _buildForgotPassword(),
+                                ),
+                                const SizedBox(height: GameZoneSpacing.lg),
+                                AuthButton(
+                                  text: 'Entrar',
+                                  onPressed: _login,
+                                  isLoading: _isLoading,
+                                  icon: Icons.login_rounded,
+                                ),
+                                const SizedBox(height: GameZoneSpacing.xl),
+                                AuthFooter(
+                                  text: 'Não tem uma conta?',
+                                  actionText: 'Cadastre-se',
+                                  onActionPressed: () {
+                                    Navigator.of(context).push(
+                                      PageRouteBuilder(
+                                        pageBuilder: (_, __, ___) => const RegisterScreen(),
+                                        transitionsBuilder: (_, animation, __, child) {
+                                          return SlideTransition(
+                                            position: Tween<Offset>(
+                                              begin: const Offset(1, 0),
+                                              end: Offset.zero,
+                                            ).animate(
+                                              CurvedAnimation(
+                                                parent: animation,
+                                                curve: GameZoneAnimations.emphasized,
+                                              ),
+                                            ),
+                                            child: child,
+                                          );
+                                        },
+                                        transitionDuration: GameZoneAnimations.page,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
