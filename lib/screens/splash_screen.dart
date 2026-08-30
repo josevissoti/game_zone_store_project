@@ -296,24 +296,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
         ),
-        Positioned(
-          bottom: -8,
-          right: -8,
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: GameZoneColors.goldGradient,
-              boxShadow: GameZoneShadows.glow,
-            ),
-            child: const Icon(
-              Icons.star_rounded,
-              size: 16,
-              color: GameZoneColors.textOnPrimary,
-            ),
-          ),
-        ),
-      ],
+        ]
     );
   }
 

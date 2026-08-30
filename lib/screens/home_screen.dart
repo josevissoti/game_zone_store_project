@@ -761,38 +761,6 @@ class _ProfileTabState extends State<ProfileTab> {
                             color: GameZoneColors.textOnPrimary.withValues(alpha: 0.8),
                           ),
                         ),
-                        const SizedBox(height: GameZoneSpacing.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: GameZoneSpacing.md,
-                            vertical: GameZoneSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: GameZoneColors.accentGreen.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(GameZoneRadius.full),
-                            border: Border.all(
-                              color: GameZoneColors.accentGreen.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.verified_rounded,
-                                size: 14,
-                                color: GameZoneColors.accentGreen,
-                              ),
-                              const SizedBox(width: GameZoneSpacing.xs),
-                              Text(
-                                'E-mail verificado',
-                                style: GameZoneTypography.labelSmall.copyWith(
-                                  color: GameZoneColors.accentGreen,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -817,7 +785,6 @@ class _ProfileTabState extends State<ProfileTab> {
                         icon: Icons.email_outlined,
                         title: 'E-mail',
                         subtitle: userModel.email,
-                        trailing: _VerifiedBadge(),
                         onTap: () {},
                       ),
                       _SettingsTile(
@@ -1044,7 +1011,6 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final Widget? trailing;
   final bool isDestructive;
   final VoidCallback? onTap;
 
@@ -1052,7 +1018,6 @@ class _SettingsTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.trailing,
     this.isDestructive = false,
     this.onTap,
   });
@@ -1110,10 +1075,7 @@ class _SettingsTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: GameZoneSpacing.md),
-                trailing!,
-              ] else if (onTap != null) ...[
+              if (onTap != null) ...[
                 const SizedBox(width: GameZoneSpacing.md),
                 Icon(
                   Icons.chevron_right_rounded,
@@ -1124,43 +1086,6 @@ class _SettingsTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _VerifiedBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: GameZoneSpacing.sm,
-        vertical: GameZoneSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: GameZoneColors.accentGreen.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(GameZoneRadius.full),
-        border: Border.all(
-          color: GameZoneColors.accentGreen.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.verified_rounded,
-            size: 12,
-            color: GameZoneColors.accentGreen,
-          ),
-          const SizedBox(width: GameZoneSpacing.xs),
-          Text(
-            'Verificado',
-            style: GameZoneTypography.labelSmall.copyWith(
-              color: GameZoneColors.accentGreen,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

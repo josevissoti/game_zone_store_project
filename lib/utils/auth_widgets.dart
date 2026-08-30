@@ -162,14 +162,11 @@ class AuthTextField extends StatefulWidget {
   State<AuthTextField> createState() => _AuthTextFieldState();
 }
 
-class _AuthTextFieldState extends State<AuthTextField>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _focusController;
-  late Animation<double> _labelScaleAnimation;
-  late Animation<Offset> _labelOffsetAnimation;
+class _AuthTextFieldState extends State<AuthTextField> {
+  late FocusNode _focusNode;
   bool _isFocused = false;
   bool _hasContent = false;
-  late FocusNode _focusNode;
+  String? _errorText;
 
   @override
   void initState() {
@@ -178,26 +175,11 @@ class _AuthTextFieldState extends State<AuthTextField>
     _focusNode.addListener(_onFocusChange);
     _hasContent = widget.controller.text.isNotEmpty;
     widget.controller.addListener(_onContentChange);
-
-    _focusController = AnimationController(
-      duration: GameZoneAnimations.fast,
-      vsync: this,
-    );
-
-    _labelScaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
-      CurvedAnimation(parent: _focusController, curve: GameZoneAnimations.standard),
-    );
-
-    _labelOffsetAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, -1.3),
-    ).animate(CurvedAnimation(parent: _focusController, curve: GameZoneAnimations.standard));
   }
 
   void _onFocusChange() {
     setState(() {
       _isFocused = _focusNode.hasFocus;
-      _focusController.forward();
     });
   }
 
@@ -206,6 +188,12 @@ class _AuthTextFieldState extends State<AuthTextField>
     if (hasContent != _hasContent) {
       setState(() => _hasContent = hasContent);
     }
+    
+    // Real-time validation: run validator on every content change
+    if (widget.validator != null) {
+      final error = widget.validator!(widget.controller.text);
+      setState(() => _errorText = error);
+    }
   }
 
   @override
@@ -213,156 +201,114 @@ class _AuthTextFieldState extends State<AuthTextField>
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     widget.controller.removeListener(_onContentChange);
-    _focusController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasError = widget.validator != null && 
-        widget.validator!(widget.controller.text) != null &&
-        (widget.controller.text.isNotEmpty || _isFocused);
+    // Use stored error text for real-time validation display
+    final hasError = _errorText != null;
 
-    // Label is in "floating" position when focused or has content
-    // In that case, we want to hide the hint (cross-fade out)
-    // When label is in placeholder position (not focused, no content), show hint
-    final showHint = !_isFocused && !_hasContent;
+    final borderColor = hasError
+        ? GameZoneColors.borderError
+        : (_isFocused || _hasContent
+            ? GameZoneColors.borderFocus
+            : GameZoneColors.border);
 
-    return AnimatedBuilder(
-      animation: _focusController,
-      builder: (context, child) {
-        final borderColor = hasError
-            ? GameZoneColors.borderError
-            : (_isFocused || _hasContent
-                ? GameZoneColors.borderFocus
-                : GameZoneColors.border);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-                    border: Border.all(
-                      color: borderColor,
-                      width: (_isFocused || _hasContent || hasError) ? 2 : 1,
-                    ),
-                    color: GameZoneColors.surface,
-                    boxShadow: (_isFocused || _hasContent)
-                        ? [
-                            BoxShadow(
-                              color: borderColor.withValues(alpha: 0.15),
-                              blurRadius: 16,
-                              spreadRadius: -4,
-                              offset: const Offset(0, 0),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: TextFormField(
-                    controller: widget.controller,
-                    focusNode: _focusNode,
-                    enabled: widget.enabled,
-                    obscureText: widget.obscureText,
-                    keyboardType: widget.keyboardType,
-                    inputFormatters: widget.inputFormatters,
-                    textCapitalization: widget.textCapitalization,
-                    style: GameZoneTypography.bodyLarge.copyWith(
-                      color: GameZoneColors.textPrimary,
-                    ),
-                    cursorColor: GameZoneColors.primaryCyan,
-                    cursorWidth: 2,
-                    validator: widget.validator,
-                    onChanged: widget.onChanged,
-                    decoration: InputDecoration(
-                      hintText: widget.hint,
-                      hintStyle: GameZoneTypography.bodyMedium.copyWith(
-                        color: GameZoneColors.textMuted.withValues(
-                          alpha: showHint ? 1.0 : 0.0,
-                        ),
-                      ),
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.all(GameZoneSpacing.md),
-                        child: Icon(
-                          widget.prefixIcon,
-                          size: 22,
-                          color: (_isFocused || _hasContent)
-                              ? GameZoneColors.primaryCyan
-                              : GameZoneColors.textMuted,
-                        ),
-                      ),
-                      suffixIcon: widget.suffixIcon != null
-                          ? Padding(
-                              padding: const EdgeInsets.all(GameZoneSpacing.md),
-                              child: widget.suffixIcon,
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: GameZoneSpacing.md,
-                        vertical: GameZoneSpacing.md,
-                      ),
-                    ),
-                  ),
-                ),
-                if (widget.label.isNotEmpty)
-                  Positioned(
-                    left: GameZoneSpacing.md,
-                    top: GameZoneSpacing.md - 6,
-                    child: Transform(
-                      alignment: Alignment.centerLeft,
-                      transform: Matrix4.identity()
-                        ..translate(
-                          _labelOffsetAnimation.value.dx * 12,
-                          _labelOffsetAnimation.value.dy * 12,
-                          0,
-                        )
-                        ..scale(_labelScaleAnimation.value),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.xs),
-                        color: GameZoneColors.surface,
-                        child: Text(
-                          widget.label,
-                          style: GameZoneTypography.labelSmall.copyWith(
-                            color: (_isFocused || _hasContent)
-                                ? GameZoneColors.primaryCyan
-                                : GameZoneColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(GameZoneRadius.lg),
+            border: Border.all(
+              color: borderColor,
+              width: (_isFocused || _hasContent || hasError) ? 2 : 1,
             ),
-            if (hasError) ...[
-              const SizedBox(height: GameZoneSpacing.xs),
-              Padding(
-                padding: const EdgeInsets.only(left: GameZoneSpacing.xs),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 14,
-                      color: GameZoneColors.borderError,
+            color: GameZoneColors.surface,
+            boxShadow: (_isFocused || _hasContent)
+                ? [
+                    BoxShadow(
+                      color: borderColor.withValues(alpha: 0.15),
+                      blurRadius: 16,
+                      spreadRadius: -4,
+                      offset: const Offset(0, 0),
                     ),
-                    const SizedBox(width: GameZoneSpacing.xs),
-                    Flexible(
-                      child: Text(
-                        widget.validator!(widget.controller.text)!,
-                        style: GameZoneTypography.labelSmall.copyWith(
-                          color: GameZoneColors.borderError,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ]
+                : null,
+          ),
+          child: TextFormField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            enabled: widget.enabled,
+            obscureText: widget.obscureText,
+            keyboardType: widget.keyboardType,
+            inputFormatters: widget.inputFormatters,
+            textCapitalization: widget.textCapitalization,
+            style: GameZoneTypography.bodyLarge.copyWith(
+              color: GameZoneColors.textPrimary,
+            ),
+            cursorColor: GameZoneColors.primaryCyan,
+            cursorWidth: 2,
+            validator: widget.validator,
+            onChanged: widget.onChanged,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              hintText: widget.hint,
+              labelStyle: GameZoneTypography.labelSmall.copyWith(
+                color: _isFocused ? GameZoneColors.primaryCyan : GameZoneColors.textMuted,
+              ),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              hintStyle: GameZoneTypography.bodyMedium.copyWith(
+                color: GameZoneColors.textMuted,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(GameZoneSpacing.md),
+                child: Icon(
+                  widget.prefixIcon,
+                  size: 22,
+                  color: _isFocused ? GameZoneColors.primaryCyan : GameZoneColors.textMuted,
                 ),
               ),
-            ],
-          ],
-        );
-      },
+              suffixIcon: widget.suffixIcon != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(GameZoneSpacing.md),
+                      child: widget.suffixIcon,
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: GameZoneSpacing.md,
+                vertical: GameZoneSpacing.md,
+              ),
+            ),
+          ),
+        ),
+        if (hasError) ...[
+          const SizedBox(height: GameZoneSpacing.xs),
+          Padding(
+            padding: const EdgeInsets.only(left: GameZoneSpacing.xs),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 14,
+                  color: GameZoneColors.borderError,
+                ),
+                const SizedBox(width: GameZoneSpacing.xs),
+                Flexible(
+                  child: Text(
+                    _errorText!,
+                    style: GameZoneTypography.labelSmall.copyWith(
+                      color: GameZoneColors.borderError,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
