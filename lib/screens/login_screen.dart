@@ -16,6 +16,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _emailKey = GlobalKey<AuthTextFieldState>();
+  final _passwordKey = GlobalKey<AuthTextFieldState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
@@ -30,24 +32,30 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      try {
-        await _authService.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-        if (mounted) {
-          showSnackBar(context, message: 'Login realizado com sucesso!', type: SnackBarType.success);
-        }
-      } on FirebaseAuthException catch (e) {
-        if (mounted) {
-          showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+    // Validate all AuthTextField widgets
+    final emailValid = _emailKey.currentState?.validate() ?? false;
+    final passwordValid = _passwordKey.currentState?.validate() ?? false;
+    
+    if (!emailValid || !passwordValid) {
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (mounted) {
+        showSnackBar(context, message: 'Login realizado com sucesso!', type: SnackBarType.success);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -86,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.xl),
                                 AuthTextField(
+                                  key: _emailKey,
                                   controller: _emailController,
                                   label: 'E-mail',
                                   hint: 'seu@email.com',
@@ -95,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.md),
                                 AuthTextField(
+                                  key: _passwordKey,
                                   controller: _passwordController,
                                   label: 'Senha',
                                   hint: '********',

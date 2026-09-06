@@ -25,6 +25,8 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameKey = GlobalKey<AuthTextFieldState>();
+  final _phoneKey = GlobalKey<AuthTextFieldState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   bool _isLoading = false;
@@ -65,7 +67,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validate all AuthTextField widgets
+    final nameValid = _nameKey.currentState?.validate() ?? false;
+    final phoneValid = _phoneKey.currentState?.validate() ?? false;
+    
+    if (!nameValid || !phoneValid) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -134,6 +142,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       const SizedBox(height: GameZoneSpacing.xl),
                       AuthTextField(
+                        key: _nameKey,
                         controller: _nameController,
                         label: 'Nome completo',
                         hint: 'João da Silva',
@@ -143,6 +152,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       const SizedBox(height: GameZoneSpacing.md),
                       AuthTextField(
+                        key: _phoneKey,
                         controller: _phoneController,
                         label: 'Telefone',
                         hint: '(11) 99999-9999',

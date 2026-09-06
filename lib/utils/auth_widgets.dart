@@ -159,13 +159,15 @@ class AuthTextField extends StatefulWidget {
   });
 
   @override
-  State<AuthTextField> createState() => _AuthTextFieldState();
+  State<AuthTextField> createState() => AuthTextFieldState();
 }
 
-class _AuthTextFieldState extends State<AuthTextField> {
+class AuthTextFieldState extends State<AuthTextField> {
   late FocusNode _focusNode;
   bool _isFocused = false;
   bool _hasContent = false;
+  bool _hasBeenTouched = false;
+  bool _formSubmitted = false;
   String? _errorText;
 
   @override
@@ -178,9 +180,14 @@ class _AuthTextFieldState extends State<AuthTextField> {
   }
 
   void _onFocusChange() {
+    final wasFocused = _isFocused;
     setState(() {
       _isFocused = _focusNode.hasFocus;
     });
+    // Mark as touched when field loses focus
+    if (wasFocused && !_isFocused) {
+      setState(() => _hasBeenTouched = true);
+    }
   }
 
   void _onContentChange() {
@@ -190,10 +197,25 @@ class _AuthTextFieldState extends State<AuthTextField> {
     }
     
     // Real-time validation: run validator on every content change
-    if (widget.validator != null) {
+    // Only update error if field has been touched or form submitted
+    if (widget.validator != null && (_hasBeenTouched || _formSubmitted)) {
       final error = widget.validator!(widget.controller.text);
       setState(() => _errorText = error);
     }
+  }
+
+  // External validation trigger (called on form submit)
+  bool validate() {
+    if (widget.validator != null) {
+      final error = widget.validator!(widget.controller.text);
+      setState(() {
+        _errorText = error;
+        _formSubmitted = true;
+      });
+      return error == null;
+    }
+    setState(() => _formSubmitted = true);
+    return true;
   }
 
   @override
@@ -206,10 +228,10 @@ class _AuthTextFieldState extends State<AuthTextField> {
 
   @override
   Widget build(BuildContext context) {
-    // Use stored error text for real-time validation display
-    final hasError = _errorText != null;
+    // Show error only if field has been touched or form submitted
+    final hasError = _errorText != null && (_hasBeenTouched || _formSubmitted);
 
-    final borderColor = hasError
+    final borderColor = _errorText != null
         ? GameZoneColors.borderError
         : (_isFocused || _hasContent
             ? GameZoneColors.borderFocus
@@ -250,7 +272,6 @@ class _AuthTextFieldState extends State<AuthTextField> {
             ),
             cursorColor: GameZoneColors.primaryCyan,
             cursorWidth: 2,
-            validator: widget.validator,
             onChanged: widget.onChanged,
             decoration: InputDecoration(
               labelText: widget.label,

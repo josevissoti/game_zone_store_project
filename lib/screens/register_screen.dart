@@ -17,6 +17,11 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameKey = GlobalKey<AuthTextFieldState>();
+  final _phoneKey = GlobalKey<AuthTextFieldState>();
+  final _emailKey = GlobalKey<AuthTextFieldState>();
+  final _passwordKey = GlobalKey<AuthTextFieldState>();
+  final _confirmPasswordKey = GlobalKey<AuthTextFieldState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
@@ -39,33 +44,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      try {
-        await _authService.registerWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          name: _nameController.text.trim(),
-          phone: _phoneController.text,
-        );
-        // Fazer logout automático para forçar login após cadastro
-        await _authService.signOut();
-        if (mounted) {
-          showSnackBar(context, message: 'Conta criada com sucesso! Faça login para continuar.', type: SnackBarType.success);
-          Navigator.pop(context); // Volta para LoginScreen
-        }
-      } on FirebaseAuthException catch (e) {
-        if (mounted) {
-          showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
-        }
-      } on FirebaseException catch (e) {
-        if (mounted) {
-          showSnackBar(context, message: _userService.getFirestoreErrorMessage(e), type: SnackBarType.error);
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+    // Validate all AuthTextField widgets
+    final nameValid = _nameKey.currentState?.validate() ?? false;
+    final phoneValid = _phoneKey.currentState?.validate() ?? false;
+    final emailValid = _emailKey.currentState?.validate() ?? false;
+    final passwordValid = _passwordKey.currentState?.validate() ?? false;
+    final confirmPasswordValid = _confirmPasswordKey.currentState?.validate() ?? false;
+    
+    if (!nameValid || !phoneValid || !emailValid || !passwordValid || !confirmPasswordValid) {
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    try {
+      await _authService.registerWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        phone: _phoneController.text,
+      );
+      // Fazer logout automático para forçar login após cadastro
+      await _authService.signOut();
+      if (mounted) {
+        showSnackBar(context, message: 'Conta criada com sucesso! Faça login para continuar.', type: SnackBarType.success);
+        Navigator.pop(context); // Volta para LoginScreen
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
+      }
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        showSnackBar(context, message: _userService.getFirestoreErrorMessage(e), type: SnackBarType.error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -112,6 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.xl),
                                 AuthTextField(
+                                  key: _nameKey,
                                   controller: _nameController,
                                   label: 'Nome completo',
                                   hint: 'João da Silva',
@@ -121,6 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.md),
                                 AuthTextField(
+                                  key: _phoneKey,
                                   controller: _phoneController,
                                   label: 'Telefone',
                                   hint: '(11) 99999-9999',
@@ -131,6 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.md),
                                 AuthTextField(
+                                  key: _emailKey,
                                   controller: _emailController,
                                   label: 'E-mail',
                                   hint: 'seu@email.com',
@@ -140,6 +157,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.md),
                                 AuthTextField(
+                                  key: _passwordKey,
                                   controller: _passwordController,
                                   label: 'Senha',
                                   hint: 'Mín. 8 caracteres',
@@ -161,6 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 const SizedBox(height: GameZoneSpacing.md),
                                 AuthTextField(
+                                  key: _confirmPasswordKey,
                                   controller: _confirmPasswordController,
                                   label: 'Confirmar senha',
                                   hint: 'Digite novamente',
