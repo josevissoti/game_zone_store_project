@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
 import '../utils/design_tokens.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -57,29 +56,6 @@ class _SplashScreenState extends State<SplashScreen>
     _logoController.forward();
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _textController.forward();
-    });
-
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const LoginScreen(),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              );
-            },
-            transitionDuration: GameZoneAnimations.page,
-          ),
-        );
-      }
     });
   }
 

@@ -6,16 +6,37 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/auth_service.dart';
+import 'services/user_service.dart';
+import 'services/game_service.dart';
 import 'utils/design_tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+  
+  // Single service instances for the entire app
+  final authService = AuthService();
+  final userService = UserService();
+  final gameService = GameService();
+  
+  runApp(MyApp(
+    authService: authService,
+    userService: userService,
+    gameService: gameService,
+  ));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final AuthService authService;
+  final UserService userService;
+  final GameService gameService;
+
+  const MyApp({
+    super.key,
+    required this.authService,
+    required this.userService,
+    required this.gameService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -169,13 +190,26 @@ class MyApp extends StatelessWidget {
           }),
         ),
       ),
-      home: const AuthWrapper(),
+      home: AuthWrapper(
+        authService: authService,
+        userService: userService,
+        gameService: gameService,
+      ),
     );
   }
 }
 
 class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
+  final AuthService authService;
+  final UserService userService;
+  final GameService gameService;
+
+  const AuthWrapper({
+    super.key,
+    required this.authService,
+    required this.userService,
+    required this.gameService,
+  });
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
@@ -202,15 +236,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     return StreamBuilder<User?>(
-      stream: AuthService().authStateChanges,
+      stream: widget.authService.authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
         if (snapshot.hasData) {
-          return const HomeScreen();
+          return HomeScreen(
+            authService: widget.authService,
+            userService: widget.userService,
+            gameService: widget.gameService,
+          );
         }
-        return const LoginScreen();
+        return LoginScreen(
+          authService: widget.authService,
+          userService: widget.userService,
+        );
       },
     );
   }

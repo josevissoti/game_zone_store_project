@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../services/game_service.dart';
 import '../models/user/user.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
 import 'edit_profile_screen.dart';
+import 'my_games_tab.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final AuthService authService;
+  final UserService userService;
+  final GameService gameService;
+
+  const HomeScreen({
+    super.key,
+    required this.authService,
+    required this.userService,
+    required this.gameService,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -15,8 +26,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final _authService = AuthService();
-  final _userService = UserService();
 
   late final List<Widget> _pages;
 
@@ -24,9 +33,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _pages = [
-      HomeTab(userService: _userService, authService: _authService),
-      const StoreTab(),
-      ProfileTab(userService: _userService, authService: _authService),
+      HomeTab(userService: widget.userService, authService: widget.authService),
+      MyGamesTab(
+        userService: widget.userService,
+        authService: widget.authService,
+        gameService: widget.gameService,
+      ),
+      ProfileTab(userService: widget.userService, authService: widget.authService),
     ];
   }
 
@@ -35,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: GameZoneColors.background,
       body: _pages[_currentIndex],
-      bottomNavigationBar: NavigationBar(
+bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         backgroundColor: GameZoneColors.surface,
@@ -48,9 +61,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Início',
           ),
           NavigationDestination(
-            icon: Icon(Icons.store_rounded),
-            selectedIcon: Icon(Icons.store_rounded, color: GameZoneColors.primaryCyan),
-            label: 'Loja',
+            icon: Icon(Icons.video_library_rounded),
+            selectedIcon: Icon(Icons.video_library_rounded, color: GameZoneColors.primaryCyan),
+            label: 'Meus Jogos',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_rounded),
@@ -516,80 +529,6 @@ class _GameItem {
   final double progress;
 
   const _GameItem(this.title, this.genre, this.imagePath, this.progress);
-}
-
-class StoreTab extends StatelessWidget {
-  const StoreTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          title: const Text('Loja'),
-          backgroundColor: GameZoneColors.surface,
-          surfaceTintColor: Colors.transparent,
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.all(GameZoneSpacing.lg),
-          sliver: SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: GameZoneColors.primaryGradient,
-                    ),
-                    child: const Icon(
-                      Icons.store_rounded,
-                      size: 60,
-                      color: GameZoneColors.textOnPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: GameZoneSpacing.xl),
-                  Text(
-                    'Loja GameZone',
-                    style: GameZoneTypography.displaySmall.copyWith(
-                      color: GameZoneColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: GameZoneSpacing.md),
-                  Text(
-                    'Em breve: catálogo completo de jogos\ndigitais com preços imperdíveis!',
-                    style: GameZoneTypography.bodyMedium.copyWith(
-                      color: GameZoneColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: GameZoneSpacing.xl),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: GameZoneSpacing.xl,
-                      vertical: GameZoneSpacing.md,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: GameZoneColors.goldGradient,
-                      borderRadius: BorderRadius.circular(GameZoneRadius.full),
-                    ),
-                    child: Text(
-                      'Notifique-me quando abrir',
-                      style: GameZoneTypography.titleMedium.copyWith(
-                        color: GameZoneColors.textOnPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class ProfileTab extends StatefulWidget {

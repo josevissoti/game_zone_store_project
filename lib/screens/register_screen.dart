@@ -9,7 +9,14 @@ import '../utils/auth_widgets.dart';
 import '../utils/snackbar.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final AuthService authService;
+  final UserService userService;
+
+  const RegisterScreen({
+    super.key,
+    required this.authService,
+    required this.userService,
+  });
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -27,8 +34,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService = AuthService();
-  final _userService = UserService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -57,25 +62,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     
     setState(() => _isLoading = true);
     try {
-      await _authService.registerWithEmailAndPassword(
+      await widget.authService.registerWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
         phone: _phoneController.text,
       );
       // Fazer logout automático para forçar login após cadastro
-      await _authService.signOut();
+      await widget.authService.signOut();
       if (mounted) {
         showSnackBar(context, message: 'Conta criada com sucesso! Faça login para continuar.', type: SnackBarType.success);
         Navigator.pop(context); // Volta para LoginScreen
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
+        showSnackBar(context, message: widget.authService.getAuthErrorMessage(e), type: SnackBarType.error);
       }
     } on FirebaseException catch (e) {
       if (mounted) {
-        showSnackBar(context, message: _userService.getFirestoreErrorMessage(e), type: SnackBarType.error);
+        showSnackBar(context, message: widget.userService.getFirestoreErrorMessage(e), type: SnackBarType.error);
       }
     } finally {
       if (mounted) {

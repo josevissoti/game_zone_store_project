@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'register_screen.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import '../utils/validators.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
 import '../utils/snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final AuthService authService;
+  final UserService userService;
+
+  const LoginScreen({
+    super.key,
+    required this.authService,
+    required this.userService,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordKey = GlobalKey<AuthTextFieldState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -42,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     
     setState(() => _isLoading = true);
     try {
-      await _authService.signInWithEmailAndPassword(
+      await widget.authService.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -51,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        showSnackBar(context, message: _authService.getAuthErrorMessage(e), type: SnackBarType.error);
+        showSnackBar(context, message: widget.authService.getAuthErrorMessage(e), type: SnackBarType.error);
       }
     } finally {
       if (mounted) {
@@ -142,7 +149,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onActionPressed: () {
                                     Navigator.of(context).push(
                                       PageRouteBuilder(
-                                        pageBuilder: (_, __, ___) => const RegisterScreen(),
+                                        pageBuilder: (_, __, ___) => RegisterScreen(
+                                          authService: widget.authService,
+                                          userService: widget.userService,
+                                        ),
                                         transitionsBuilder: (_, animation, __, child) {
                                           return SlideTransition(
                                             position: Tween<Offset>(

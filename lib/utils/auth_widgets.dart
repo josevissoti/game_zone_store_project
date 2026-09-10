@@ -125,7 +125,7 @@ class AuthCardHeader extends StatelessWidget {
         ],
       ],
     );
-  }
+}
 }
 
 class AuthTextField extends StatefulWidget {
@@ -141,6 +141,8 @@ class AuthTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final TextCapitalization textCapitalization;
   final bool enabled;
+  final VoidCallback? onTap;
+  final bool readOnly;
 
   const AuthTextField({
     super.key,
@@ -156,6 +158,8 @@ class AuthTextField extends StatefulWidget {
     this.onChanged,
     this.textCapitalization = TextCapitalization.none,
     this.enabled = true,
+    this.onTap,
+    this.readOnly = false,
   });
 
   @override
@@ -263,6 +267,7 @@ class AuthTextFieldState extends State<AuthTextField> {
             controller: widget.controller,
             focusNode: _focusNode,
             enabled: widget.enabled,
+            readOnly: widget.readOnly,
             obscureText: widget.obscureText,
             keyboardType: widget.keyboardType,
             inputFormatters: widget.inputFormatters,
@@ -273,6 +278,7 @@ class AuthTextFieldState extends State<AuthTextField> {
             cursorColor: GameZoneColors.primaryCyan,
             cursorWidth: 2,
             onChanged: widget.onChanged,
+            onTap: widget.onTap,
             decoration: InputDecoration(
               labelText: widget.label,
               hintText: widget.hint,
@@ -406,10 +412,13 @@ class AuthButton extends StatelessWidget {
                         Icon(icon, size: 20, color: GameZoneColors.textOnPrimary),
                         const SizedBox(width: GameZoneSpacing.sm),
                       ],
-                      Text(
-                        text,
-                        style: GameZoneTypography.titleLarge.copyWith(
-                          color: GameZoneColors.textOnPrimary,
+                      Flexible(
+                        child: Text(
+                          text,
+                          style: GameZoneTypography.titleLarge.copyWith(
+                            color: GameZoneColors.textOnPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -463,10 +472,13 @@ class AuthButton extends StatelessWidget {
                         Icon(icon, size: 20, color: GameZoneColors.textOnPrimary),
                         const SizedBox(width: GameZoneSpacing.sm),
                       ],
-                      Text(
-                        text,
-                        style: GameZoneTypography.titleLarge.copyWith(
-                          color: GameZoneColors.textOnPrimary,
+                      Flexible(
+                        child: Text(
+                          text,
+                          style: GameZoneTypography.titleLarge.copyWith(
+                            color: GameZoneColors.textOnPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -524,12 +536,15 @@ class AuthButton extends StatelessWidget {
                         ),
                         const SizedBox(width: GameZoneSpacing.sm),
                       ],
-                      Text(
-                        text,
-                        style: GameZoneTypography.titleLarge.copyWith(
-                          color: onPressed != null
-                              ? GameZoneColors.primaryCyan
-                              : GameZoneColors.textMuted,
+                      Flexible(
+                        child: Text(
+                          text,
+                          style: GameZoneTypography.titleLarge.copyWith(
+                            color: onPressed != null
+                                ? GameZoneColors.primaryCyan
+                                : GameZoneColors.textMuted,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
