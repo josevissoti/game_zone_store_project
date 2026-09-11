@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../models/game/game.dart';
 import '../../services/game_service.dart';
+import '../../services/user_service.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/formatters.dart';
 import '../../utils/snackbar.dart';
 import '../../utils/auth_widgets.dart';
+import '../../widgets/owner_name_resolver.dart';
 import 'edit_game_screen.dart';
 
 typedef OnGameDeleted = void Function();
@@ -478,13 +480,15 @@ class EmptyGamesState extends StatelessWidget {
 
 class GameStoreCard extends StatelessWidget {
   final GameModel game;
-  final String ownerName;
+  final String ownerUid;
+  final UserService userService;
   final VoidCallback onBuy;
 
   const GameStoreCard({
     super.key,
     required this.game,
-    required this.ownerName,
+    required this.ownerUid,
+    required this.userService,
     required this.onBuy,
   });
 
@@ -566,36 +570,9 @@ class GameStoreCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: GameZoneSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: GameZoneSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: GameZoneColors.primaryCyan.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(GameZoneRadius.full),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.person_rounded,
-                          size: 10,
-                          color: GameZoneColors.primaryCyan,
-                        ),
-                        const SizedBox(width: 2),
-                        Flexible(
-                          child: Text(
-                            ownerName,
-                            style: GameZoneTypography.labelSmall.copyWith(
-                              color: GameZoneColors.primaryCyan,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                  OwnerNameChip(
+                    uid: ownerUid,
+                    userService: userService,
                   ),
                 ],
               ),

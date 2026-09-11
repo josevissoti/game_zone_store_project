@@ -277,8 +277,6 @@ class _EditGameScreenState extends State<EditGameScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: GameZoneSpacing.lg),
-                            _buildHintSection(),
                           ],
                         ),
                       ),
@@ -356,42 +354,6 @@ class _EditGameScreenState extends State<EditGameScreen> {
       prefixIcon: Icons.category_rounded,
       textCapitalization: TextCapitalization.words,
       validator: Validators.validateGenre,
-    );
-  }
-
-  Widget _buildHintSection() {
-    return Container(
-      padding: const EdgeInsets.all(GameZoneSpacing.md),
-      decoration: BoxDecoration(
-        color: GameZoneColors.primaryCyan.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-        border: Border.all(color: GameZoneColors.primaryCyan.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline_rounded, size: 18, color: GameZoneColors.primaryCyan),
-              const SizedBox(width: GameZoneSpacing.sm),
-              Text(
-                'Informações',
-                style: GameZoneTypography.labelMedium.copyWith(color: GameZoneColors.primaryCyan),
-              ),
-            ],
-          ),
-          const SizedBox(height: GameZoneSpacing.sm),
-          Text(
-            '• Apenas o criador pode editar este jogo\n'
-            '• Confirmação necessária antes de salvar\n'
-            '• Preço e data formatados automaticamente',
-            style: GameZoneTypography.bodySmall.copyWith(
-              color: GameZoneColors.textSecondary,
-              height: 1.6,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

@@ -8,6 +8,8 @@ import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
 import '../utils/snackbar.dart';
 import '../utils/formatters.dart';
+import '../widgets/gamezone_hero_header.dart';
+import '../widgets/search_filter.dart';
 import 'edit_profile_screen.dart';
 import 'my_games_tab.dart';
 import 'game_card_widget.dart';
@@ -262,6 +264,7 @@ class _HomeTabState extends State<HomeTab> {
               games: games,
               firstName: firstName,
               scrollController: _scrollController,
+              userService: widget.userService,
               onBuy: _showBuyDialog,
             );
           },
@@ -336,10 +339,11 @@ class _HomeTabState extends State<HomeTab> {
   }
 }
 
-class HomeTabContent extends StatelessWidget {
+class HomeTabContent extends StatefulWidget {
   final List<GameModel> games;
   final String firstName;
   final ScrollController scrollController;
+  final UserService userService;
   final void Function(BuildContext, GameModel) onBuy;
 
   const HomeTabContent({
@@ -347,61 +351,51 @@ class HomeTabContent extends StatelessWidget {
     required this.games,
     required this.firstName,
     required this.scrollController,
+    required this.userService,
     required this.onBuy,
   });
 
   @override
+  State<HomeTabContent> createState() => _HomeTabContentState();
+}
+
+class _HomeTabContentState extends State<HomeTabContent> {
+  String _searchQuery = '';
+
+  List<GameModel> get _filteredGames {
+    if (_searchQuery.isEmpty) return widget.games;
+    return widget.games.where((game) {
+      final query = _searchQuery;
+      return game.nome.toLowerCase().contains(query) ||
+             game.empresa.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() => _searchQuery = query);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CustomScrollView(
-      controller: scrollController,
+      controller: widget.scrollController,
       physics: const ClampingScrollPhysics(),
       slivers: [
-        // Hero Section
-        SliverAppBar(
+        // Hero Section with GameZone branding
+        GameZoneHeroHeader(
+          collapsedTitle: 'Olá, ${widget.firstName}!',
+          collapsedSubtitle: 'Sua loja de jogos',
+          expandedTagline: 'Descubra os melhores jogos',
           expandedHeight: 160,
-          floating: false,
-          pinned: true,
-          backgroundColor: GameZoneColors.surface,
-          surfaceTintColor: Colors.transparent,
-          flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.only(left: GameZoneSpacing.lg, bottom: 16),
-            title: Text(
-              'Olá, $firstName!',
-              style: GameZoneTypography.displaySmall.copyWith(
-                color: GameZoneColors.textPrimary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: GameZoneColors.primaryGradient,
-              ),
-              child: Positioned(
-                left: GameZoneSpacing.lg,
-                bottom: 16,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Olá, $firstName!',
-                      style: GameZoneTypography.displaySmall.copyWith(
-                        color: GameZoneColors.textOnPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Descubra os melhores jogos',
-                      style: GameZoneTypography.bodyMedium.copyWith(
-                        color: GameZoneColors.textOnPrimary.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        ),
+        // Search Filter
+        SliverToBoxAdapter(
+          child: SearchFilter(
+            hintText: 'Buscar por nome ou empresa...',
+            onChanged: _onSearchChanged,
           ),
         ),
+        // Section Title
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.lg),
           sliver: SliverToBoxAdapter(
@@ -442,21 +436,53 @@ class HomeTabContent extends StatelessWidget {
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                final game = games[index];
+                final game = _filteredGames[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: GameZoneSpacing.md),
                   child: GameStoreCard(
                     key: ValueKey(game.id),
                     game: game,
-                    ownerName: 'Usuário',
-                    onBuy: () => onBuy(context, game),
+                    ownerUid: game.createdBy,
+                    userService: widget.userService,
+                    onBuy: () => widget.onBuy(context, game),
                   ),
                 );
               },
-              childCount: games.length,
+              childCount: _filteredGames.length,
             ),
           ),
         ),
+        // Empty state when filtered
+        if (_filteredGames.isEmpty && widget.games.isNotEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off_rounded,
+                    size: 64,
+                    color: GameZoneColors.textMuted,
+                  ),
+                  const SizedBox(height: GameZoneSpacing.md),
+                  Text(
+                    'Nenhum jogo encontrado',
+                    style: GameZoneTypography.headlineSmall.copyWith(
+                      color: GameZoneColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: GameZoneSpacing.xs),
+                  Text(
+                    'Tente ajustar sua busca',
+                    style: GameZoneTypography.bodyMedium.copyWith(
+                      color: GameZoneColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }

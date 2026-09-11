@@ -6,6 +6,8 @@ import '../models/user/user.dart';
 import '../models/game/game.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
+import '../widgets/gamezone_hero_header.dart';
+import '../widgets/search_filter.dart';
 import 'create_game_screen.dart';
 import 'game_card_widget.dart';
 
@@ -29,6 +31,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
   int _retryKey = 0;
   UserModel? _initialUserModel;
   bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -124,6 +127,13 @@ class _MyGamesTabState extends State<MyGamesTab> {
           body: CustomScrollView(
             slivers: [
               _buildHeroSection(userModel),
+              // Search Filter
+              SliverToBoxAdapter(
+                child: SearchFilter(
+                  hintText: 'Filtrar meus jogos...',
+                  onChanged: (query) => setState(() => _searchQuery = query),
+                ),
+              ),
               _buildGamesList(user.uid, userModel.name),
             ],
           ),
@@ -154,110 +164,41 @@ class _MyGamesTabState extends State<MyGamesTab> {
   }
 
   Widget _buildHeroSection(UserModel userModel) {
-    return SliverAppBar(
+    return GameZoneHeroHeader(
+      collapsedTitle: 'Meus Jogos',
+      collapsedSubtitle: 'Sua biblioteca pessoal de jogos',
+      expandedTagline: 'Sua biblioteca pessoal de jogos',
       expandedHeight: 180,
-      floating: false,
-      pinned: true,
-      backgroundColor: GameZoneColors.surface,
-      surfaceTintColor: Colors.transparent,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: GameZoneSpacing.lg, bottom: 16),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Meus Jogos',
-              style: GameZoneTypography.displaySmall.copyWith(
-                color: GameZoneColors.textPrimary,
-              ),
+      trailing: StreamBuilder<List<GameModel>>(
+        stream: widget.gameService.watchGamesByUser(userModel.uid),
+        builder: (context, snapshot) {
+          final count = snapshot.data?.length ?? 0;
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: GameZoneSpacing.md,
+              vertical: GameZoneSpacing.xs,
             ),
-            Text(
-              'Sua biblioteca pessoal de jogos',
-              style: GameZoneTypography.bodyMedium.copyWith(
-                color: GameZoneColors.textSecondary,
-              ),
+            decoration: BoxDecoration(
+              color: GameZoneColors.surface.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(GameZoneRadius.full),
+              border: Border.all(color: GameZoneColors.border),
             ),
-          ],
-        ),
-        background: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: GameZoneColors.primaryGradient,
-              ),
-            ),
-            Positioned(
-              top: -60,
-              right: -40,
-              child: Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      GameZoneColors.accentCoral.withValues(alpha: 0.15),
-                      Colors.transparent,
-                    ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.video_library_rounded, size: 14, color: GameZoneColors.primaryCyan),
+                const SizedBox(width: GameZoneSpacing.xs),
+                Text(
+                  '$count jogo${count != 1 ? 's' : ''}',
+                  style: GameZoneTypography.labelSmall.copyWith(
+                    color: GameZoneColors.textPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
+              ],
             ),
-            Positioned(
-              bottom: -80,
-              left: -60,
-              child: Container(
-                width: 220,
-                height: 220,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      GameZoneColors.primaryCyan.withValues(alpha: 0.1),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: GameZoneSpacing.lg,
-              right: GameZoneSpacing.lg,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: GameZoneSpacing.md,
-                  vertical: GameZoneSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: GameZoneColors.surface.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(GameZoneRadius.full),
-                  border: Border.all(color: GameZoneColors.border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.video_library_rounded, size: 16, color: GameZoneColors.primaryCyan),
-                    const SizedBox(width: GameZoneSpacing.xs),
-                    StreamBuilder<List<GameModel>>(
-                      stream: widget.gameService.watchGamesByUser(userModel.uid),
-                      builder: (context, snapshot) {
-                        final count = snapshot.data?.length ?? 0;
-                        return Text(
-                          '$count jogo${count != 1 ? 's' : ''}',
-                          style: GameZoneTypography.labelMedium.copyWith(
-                            color: GameZoneColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -299,12 +240,53 @@ class _MyGamesTabState extends State<MyGamesTab> {
           );
         }
 
-        final games = snapshot.data ?? [];
+        final allGames = snapshot.data ?? [];
 
-        if (games.isEmpty) {
+        if (allGames.isEmpty) {
           return SliverFillRemaining(
             hasScrollBody: false,
             child: EmptyGamesState(onCreateGame: _navigateToCreateGame),
+          );
+        }
+
+        // Apply search filter
+        final filteredGames = _searchQuery.isEmpty
+            ? allGames
+            : allGames.where((game) {
+                final query = _searchQuery;
+                return game.nome.toLowerCase().contains(query) ||
+                       game.empresa.toLowerCase().contains(query);
+              }).toList();
+
+        if (filteredGames.isEmpty) {
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off_rounded,
+                    size: 64,
+                    color: GameZoneColors.textMuted,
+                  ),
+                  const SizedBox(height: GameZoneSpacing.md),
+                  Text(
+                    'Nenhum jogo encontrado',
+                    style: GameZoneTypography.headlineSmall.copyWith(
+                      color: GameZoneColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: GameZoneSpacing.xs),
+                  Text(
+                    'Tente ajustar sua busca',
+                    style: GameZoneTypography.bodyMedium.copyWith(
+                      color: GameZoneColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
@@ -313,7 +295,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                final game = games[index];
+                final game = filteredGames[index];
                 return GameCard(
                   key: ValueKey(game.id),
                   game: game,
@@ -324,7 +306,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
                   onUpdated: () => setState(() => _retryKey++),
                 );
               },
-              childCount: games.length,
+              childCount: filteredGames.length,
             ),
           ),
         );

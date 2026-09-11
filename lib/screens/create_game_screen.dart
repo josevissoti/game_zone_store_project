@@ -208,8 +208,6 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
                               isLoading: _isLoading,
                               icon: Icons.add_rounded,
                             ),
-                            const SizedBox(height: GameZoneSpacing.lg),
-                            _buildHintSection(),
                           ],
                         ),
                       ),
@@ -287,42 +285,6 @@ class _CreateGameScreenState extends State<CreateGameScreen> {
       prefixIcon: Icons.category_rounded,
       textCapitalization: TextCapitalization.words,
       validator: Validators.validateGenre,
-    );
-  }
-
-  Widget _buildHintSection() {
-    return Container(
-      padding: const EdgeInsets.all(GameZoneSpacing.md),
-      decoration: BoxDecoration(
-        color: GameZoneColors.primaryCyan.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(GameZoneRadius.lg),
-        border: Border.all(color: GameZoneColors.primaryCyan.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline_rounded, size: 18, color: GameZoneColors.primaryCyan),
-              const SizedBox(width: GameZoneSpacing.sm),
-              Text(
-                'Dicas',
-                style: GameZoneTypography.labelMedium.copyWith(color: GameZoneColors.primaryCyan),
-              ),
-            ],
-          ),
-          const SizedBox(height: GameZoneSpacing.sm),
-          Text(
-            '• O preço é formatado automaticamente (R\$ 199,90)\n'
-            '• A data pode ser futura para jogos em pré-venda\n'
-            '• Apenas você poderá editar ou excluir este jogo',
-            style: GameZoneTypography.bodySmall.copyWith(
-              color: GameZoneColors.textSecondary,
-              height: 1.6,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
