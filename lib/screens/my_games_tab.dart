@@ -124,7 +124,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
           body: CustomScrollView(
             slivers: [
               _buildHeroSection(userModel),
-              _buildGamesList(user.uid),
+              _buildGamesList(user.uid, userModel.name),
             ],
           ),
         );
@@ -262,7 +262,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
     );
   }
 
-  Widget _buildGamesList(String uid) {
+  Widget _buildGamesList(String uid, String ownerName) {
     return StreamBuilder<List<GameModel>>(
       stream: widget.gameService.watchGamesByUser(uid),
       builder: (context, snapshot) {
@@ -319,6 +319,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
                   game: game,
                   currentUserId: uid,
                   gameService: widget.gameService,
+                  ownerName: ownerName,
                   onDeleted: () => setState(() => _retryKey++),
                   onUpdated: () => setState(() => _retryKey++),
                 );

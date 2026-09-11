@@ -14,6 +14,7 @@ class GameCard extends StatefulWidget {
   final GameModel game;
   final String currentUserId;
   final GameService gameService;
+  final String? ownerName;
   final OnGameDeleted? onDeleted;
   final OnGameUpdated? onUpdated;
 
@@ -22,6 +23,7 @@ class GameCard extends StatefulWidget {
     required this.game,
     required this.currentUserId,
     required this.gameService,
+    this.ownerName,
     this.onDeleted,
     this.onUpdated,
   });
@@ -269,13 +271,13 @@ class _GameCardState extends State<GameCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.edit_rounded,
+                            Icons.person_rounded,
                             size: 10,
                             color: GameZoneColors.primaryCyan,
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            'Seu',
+                            widget.ownerName ?? 'Você',
                             style: GameZoneTypography.labelSmall.copyWith(
                               color: GameZoneColors.primaryCyan,
                               fontWeight: FontWeight.w600,
@@ -469,6 +471,215 @@ class EmptyGamesState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class GameStoreCard extends StatelessWidget {
+  final GameModel game;
+  final String ownerName;
+  final VoidCallback onBuy;
+
+  const GameStoreCard({
+    super.key,
+    required this.game,
+    required this.ownerName,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: GameZoneColors.cardGradient,
+        borderRadius: BorderRadius.circular(GameZoneRadius.xl),
+        border: Border.all(color: GameZoneColors.border),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.all(GameZoneSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: GameZoneSpacing.md),
+              _buildInfoRows(),
+              const SizedBox(height: GameZoneSpacing.md),
+              _buildBuyButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: GameZoneColors.primaryGradient,
+            borderRadius: BorderRadius.circular(GameZoneRadius.lg),
+          ),
+          child: const Icon(
+            Icons.videogame_asset_rounded,
+            color: GameZoneColors.textOnPrimary,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: GameZoneSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                game.nome,
+                style: GameZoneTypography.titleLarge.copyWith(
+                  color: GameZoneColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: GameZoneSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: GameZoneColors.accentCoral.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(GameZoneRadius.full),
+                    ),
+                    child: Text(
+                      game.genero,
+                      style: GameZoneTypography.labelSmall.copyWith(
+                        color: GameZoneColors.accentCoral,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: GameZoneSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: GameZoneSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: GameZoneColors.primaryCyan.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(GameZoneRadius.full),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person_rounded,
+                          size: 10,
+                          color: GameZoneColors.primaryCyan,
+                        ),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            ownerName,
+                            style: GameZoneTypography.labelSmall.copyWith(
+                              color: GameZoneColors.primaryCyan,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRows() {
+    return Column(
+      children: [
+        _buildInfoRow(
+          icon: Icons.attach_money_rounded,
+          label: 'Preço',
+          value: CurrencyFormatter.format(game.preco),
+          color: GameZoneColors.accentGreen,
+        ),
+        const SizedBox(height: GameZoneSpacing.sm),
+        _buildInfoRow(
+          icon: Icons.calendar_today_rounded,
+          label: 'Publicação',
+          value: DateFormatter.format(game.dataPublicacao),
+          color: GameZoneColors.primaryCyan,
+        ),
+        const SizedBox(height: GameZoneSpacing.sm),
+        _buildInfoRow(
+          icon: Icons.business_rounded,
+          label: 'Empresa',
+          value: game.empresa,
+          color: GameZoneColors.primaryPurple,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(GameZoneRadius.md),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: GameZoneSpacing.md),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GameZoneTypography.labelSmall.copyWith(
+                color: GameZoneColors.textMuted,
+              ),
+            ),
+            Text(
+              value,
+              style: GameZoneTypography.bodyMedium.copyWith(
+                color: GameZoneColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBuyButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: AuthButton(
+        text: 'Comprar',
+        onPressed: onBuy,
+        icon: Icons.shopping_cart_rounded,
       ),
     );
   }

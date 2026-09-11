@@ -3,10 +3,14 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/game_service.dart';
 import '../models/user/user.dart';
+import '../models/game/game.dart';
 import '../utils/design_tokens.dart';
 import '../utils/auth_widgets.dart';
+import '../utils/snackbar.dart';
+import '../utils/formatters.dart';
 import 'edit_profile_screen.dart';
 import 'my_games_tab.dart';
+import 'game_card_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -33,7 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _pages = [
-      HomeTab(userService: widget.userService, authService: widget.authService),
+      HomeTab(
+        userService: widget.userService,
+        authService: widget.authService,
+        gameService: widget.gameService,
+      ),
       MyGamesTab(
         userService: widget.userService,
         authService: widget.authService,
@@ -48,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: GameZoneColors.background,
       body: _pages[_currentIndex],
-bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         backgroundColor: GameZoneColors.surface,
@@ -79,11 +87,13 @@ bottomNavigationBar: NavigationBar(
 class HomeTab extends StatefulWidget {
   final UserService userService;
   final AuthService authService;
+  final GameService gameService;
 
   const HomeTab({
     super.key,
     required this.userService,
     required this.authService,
+    required this.gameService,
   });
 
   @override
@@ -94,7 +104,6 @@ class _HomeTabState extends State<HomeTab> {
   UserModel? _initialUserModel;
   bool _isLoading = true;
   final _scrollController = ScrollController();
-  double _scrollOffset = 0;
 
   @override
   void initState() {
@@ -110,9 +119,8 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      setState(() => _scrollOffset = _scrollController.offset);
-    }
+    // Scroll listener kept for potential future use (e.g., scroll-based animations)
+    // No setState needed - avoids rebuild on every scroll event
   }
 
   Future<void> _loadInitialUser() async {
@@ -156,379 +164,302 @@ class _HomeTabState extends State<HomeTab> {
     return StreamBuilder<UserModel>(
       stream: widget.userService.watchUser(user.uid),
       initialData: _initialUserModel,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting &&
             _initialUserModel == null) {
           return const Center(
             child: CircularProgressIndicator(color: GameZoneColors.primaryCyan),
           );
         }
 
-        final userName = snapshot.data?.name ?? _initialUserModel?.name ?? 'Usuário';
+        final userName = userSnapshot.data?.name ?? _initialUserModel?.name ?? 'Usuário';
         final firstName = userName.split(' ').first;
 
-        return CustomScrollView(
-          controller: _scrollController,
-          physics: const ClampingScrollPhysics(),
-          slivers: [
-            // Hero Section with Parallax
-            SliverAppBar(
-              expandedHeight: 160,
-              floating: false,
-              pinned: true,
-              backgroundColor: GameZoneColors.surface,
-              surfaceTintColor: Colors.transparent,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: GameZoneSpacing.lg, bottom: 16),
-                title: Column(
+        return StreamBuilder<List<GameModel>>(
+          stream: widget.gameService.watchAllGames(),
+          builder: (context, gamesSnapshot) {
+            if (gamesSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: GameZoneColors.primaryCyan),
+              );
+            }
+
+            if (gamesSnapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 64,
+                      color: GameZoneColors.borderError,
+                    ),
+                    const SizedBox(height: GameZoneSpacing.md),
+                    Text(
+                      'Erro ao carregar jogos',
+                      style: GameZoneTypography.headlineSmall.copyWith(
+                        color: GameZoneColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: GameZoneSpacing.sm),
+                    Text(
+                      gamesSnapshot.error.toString(),
+                      style: GameZoneTypography.bodyMedium.copyWith(
+                        color: GameZoneColors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final games = gamesSnapshot.data ?? [];
+
+            if (games.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(GameZoneSpacing.xl),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: GameZoneColors.primaryGradient,
+                        ),
+                        child: const Icon(
+                          Icons.videogame_asset_rounded,
+                          size: 60,
+                          color: GameZoneColors.textOnPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: GameZoneSpacing.xl),
+                      Text(
+                        'Nenhum jogo disponível',
+                        style: GameZoneTypography.headlineMedium.copyWith(
+                          color: GameZoneColors.textPrimary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: GameZoneSpacing.md),
+                      Text(
+                        'Seja o primeiro a cadastrar um jogo!',
+                        style: GameZoneTypography.bodyMedium.copyWith(
+                          color: GameZoneColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return HomeTabContent(
+              games: games,
+              firstName: firstName,
+              scrollController: _scrollController,
+              onBuy: _showBuyDialog,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showBuyDialog(BuildContext context, GameModel game) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: GameZoneColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GameZoneRadius.xl),
+        ),
+        title: Text(
+          'Comprar Jogo',
+          style: GameZoneTypography.headlineSmall.copyWith(
+            color: GameZoneColors.primaryCyan,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deseja comprar "${game.nome}"?',
+              style: GameZoneTypography.bodyMedium.copyWith(
+                color: GameZoneColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: GameZoneSpacing.sm),
+            Text(
+              'Preço: ${CurrencyFormatter.format(game.preco)}',
+              style: GameZoneTypography.bodyLarge.copyWith(
+                color: GameZoneColors.accentGreen,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: ShaderMask(
+              shaderCallback: (bounds) => GameZoneColors.primaryGradient.createShader(bounds),
+              child: Text(
+                'Cancelar',
+                style: GameZoneTypography.titleMedium.copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+          AuthButton(
+            text: 'Confirmar',
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement purchase logic
+              showSnackBar(
+                context,
+                message: 'Compra de "${game.nome}" iniciada!',
+                type: SnackBarType.success,
+              );
+            },
+            isCoral: false,
+            width: 120,
+            icon: Icons.check_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class HomeTabContent extends StatelessWidget {
+  final List<GameModel> games;
+  final String firstName;
+  final ScrollController scrollController;
+  final void Function(BuildContext, GameModel) onBuy;
+
+  const HomeTabContent({
+    super.key,
+    required this.games,
+    required this.firstName,
+    required this.scrollController,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      controller: scrollController,
+      physics: const ClampingScrollPhysics(),
+      slivers: [
+        // Hero Section
+        SliverAppBar(
+          expandedHeight: 160,
+          floating: false,
+          pinned: true,
+          backgroundColor: GameZoneColors.surface,
+          surfaceTintColor: Colors.transparent,
+          flexibleSpace: FlexibleSpaceBar(
+            titlePadding: const EdgeInsets.only(left: GameZoneSpacing.lg, bottom: 16),
+            title: Text(
+              'Olá, $firstName!',
+              style: GameZoneTypography.displaySmall.copyWith(
+                color: GameZoneColors.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            background: Container(
+              decoration: BoxDecoration(
+                gradient: GameZoneColors.primaryGradient,
+              ),
+              child: Positioned(
+                left: GameZoneSpacing.lg,
+                bottom: 16,
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Olá, $firstName!',
                       style: GameZoneTypography.displaySmall.copyWith(
-                        color: GameZoneColors.textPrimary,
+                        color: GameZoneColors.textOnPrimary,
                       ),
                     ),
                     Text(
                       'Descubra os melhores jogos',
                       style: GameZoneTypography.bodyMedium.copyWith(
-                        color: GameZoneColors.textSecondary,
+                        color: GameZoneColors.textOnPrimary.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
-                ),
-                background: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: GameZoneColors.primaryGradient,
-                      ),
-                    ),
-                    // Parallax gradient orb
-                    Positioned(
-                      top: -80 + (_scrollOffset * 0.15),
-                      right: -60,
-                      child: Container(
-                        width: 200,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              GameZoneColors.primaryCyan.withValues(alpha: 0.15),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -100 + (_scrollOffset * 0.1),
-                      left: -80,
-                      child: Container(
-                        width: 240,
-                        height: 240,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              GameZoneColors.primaryPurple.withValues(alpha: 0.12),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.lg),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: GameZoneSpacing.xl),
-                  // Continue Playing Section
-                  _buildSection(
-                    title: 'Continue Jogando',
-                    subtitle: 'Retome onde parou',
-                    child: _buildHorizontalGameList(_mockContinuePlayingGames()),
-                  ),
-                  const SizedBox(height: GameZoneSpacing.xl),
-                  // Featured Section
-                  _buildSection(
-                    title: 'Em Destaque',
-                    subtitle: 'Escolhas da semana',
-                    child: _buildHorizontalGameList(_mockFeaturedGames(), isFeatured: true),
-                  ),
-                  const SizedBox(height: GameZoneSpacing.xl),
-                  // New Releases Section
-                  _buildSection(
-                    title: 'Novidades',
-                    subtitle: 'Lançamentos recentes',
-                    child: _buildNewReleasesGrid(_mockNewReleasesGames()),
-                  ),
-                  const SizedBox(height: GameZoneSpacing.xl),
-                  // Trending Section
-                  _buildSection(
-                    title: 'Em Alta',
-                    subtitle: 'Mais jogados agora',
-                    child: _buildHorizontalGameList(_mockTrendingGames()),
-                  ),
-                  const SizedBox(height: GameZoneSpacing.xxxl),
-                ]),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Mock data for demonstration
-  List<_GameItem> _mockContinuePlayingGames() => [
-    _GameItem('Elden Ring', 'RPG de Ação', 'assets/images/elden_ring.jpg', 0.65),
-    _GameItem('Cyberpunk 2077', 'RPG', 'assets/images/cyberpunk.jpg', 0.42),
-    _GameItem('The Witcher 3', 'RPG de Ação', 'assets/images/witcher3.jpg', 0.78),
-  ];
-
-  List<_GameItem> _mockFeaturedGames() => [
-    _GameItem('Baldur\'s Gate 3', 'RPG', 'assets/images/bg3.jpg', 0.0),
-    _GameItem('Alan Wake 2', 'Terror Psicológico', 'assets/images/alan_wake2.jpg', 0.0),
-    _GameItem('Hogwarts Legacy', 'RPG de Ação', 'assets/images/hogwarts.jpg', 0.0),
-  ];
-
-  List<_GameItem> _mockNewReleasesGames() => [
-    _GameItem('Starfield', 'RPG Espacial', 'assets/images/starfield.jpg', 0.0),
-    _GameItem('Lies of P', 'Soulslike', 'assets/images/lies_of_p.jpg', 0.0),
-    _GameItem('Remnant 2', 'Tiro em Terceira Pessoa', 'assets/images/remnant2.jpg', 0.0),
-    _GameItem('Armored Core VI', 'Mecha Action', 'assets/images/armored_core.jpg', 0.0),
-    _GameItem('Sea of Stars', 'RPG por Turnos', 'assets/images/sea_of_stars.jpg', 0.0),
-    _GameItem('Dave the Diver', 'Aventura/Pesca', 'assets/images/dave_diver.jpg', 0.0),
-  ];
-
-  List<_GameItem> _mockTrendingGames() => [
-    _GameItem('Counter-Strike 2', 'FPS Competitivo', 'assets/images/cs2.jpg', 0.0),
-    _GameItem('Dota 2', 'MOBA', 'assets/images/dota2.jpg', 0.0),
-    _GameItem('Apex Legends', 'Battle Royale', 'assets/images/apex.jpg', 0.0),
-    _GameItem('Valorant', 'FPS Tático', 'assets/images/valorant.jpg', 0.0),
-  ];
-
-  Widget _buildSection({
-    required String title,
-    required String subtitle,
-    required Widget child,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GameZoneTypography.headlineMedium.copyWith(
-                    color: GameZoneColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GameZoneTypography.bodySmall.copyWith(
-                    color: GameZoneColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-            TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: ShaderMask(
-                shaderCallback: (bounds) => GameZoneColors.primaryGradient
-                    .createShader(bounds),
-                child: Text(
-                  'Ver todos',
-                  style: GameZoneTypography.labelMedium.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: GameZoneSpacing.md),
-        child,
-      ],
-    );
-  }
-
-  Widget _buildHorizontalGameList(List<_GameItem> games, {bool isFeatured = false}) {
-    return SizedBox(
-      height: isFeatured ? 240 : 180,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: games.length,
-        separatorBuilder: (_, __) => const SizedBox(width: GameZoneSpacing.md),
-        itemBuilder: (context, index) {
-          return _buildGameCard(games[index], isFeatured: isFeatured);
-        },
-      ),
-    );
-  }
-
-  Widget _buildNewReleasesGrid(List<_GameItem> games) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: GameZoneSpacing.md,
-        mainAxisSpacing: GameZoneSpacing.md,
-        childAspectRatio: 0.7,
-      ),
-      itemCount: games.length,
-      itemBuilder: (context, index) {
-        return _buildGameCard(games[index], isGrid: true);
-      },
-    );
-  }
-
-  Widget _buildGameCard(_GameItem game, {bool isFeatured = false, bool isGrid = false}) {
-    final width = isFeatured ? 280.0 : (isGrid ? null : 200.0);
-    final height = isFeatured ? 240.0 : (isGrid ? null : 180.0);
-
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        gradient: GameZoneColors.cardGradient,
-        borderRadius: BorderRadius.circular(GameZoneRadius.xl),
-        border: Border.all(color: GameZoneColors.border),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(GameZoneRadius.xl),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      GameZoneColors.primaryCyan.withValues(alpha: 0.08),
-                      GameZoneColors.primaryPurple.withValues(alpha: 0.12),
-                      GameZoneColors.background,
-                    ],
-                  ),
                 ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(GameZoneSpacing.lg),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.lg),
+          sliver: SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: GameZoneSpacing.md,
-                    vertical: GameZoneSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: GameZoneColors.accentCoral.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(GameZoneRadius.full),
-                  ),
-                  child: Text(
-                    game.genre,
-                    style: GameZoneTypography.labelSmall.copyWith(
-                      color: GameZoneColors.accentCoral,
-                      fontWeight: FontWeight.w600,
+                const SizedBox(height: GameZoneSpacing.xl),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Todos os Jogos',
+                          style: GameZoneTypography.headlineMedium.copyWith(
+                            color: GameZoneColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Catálogo completo da GameZone',
+                          style: GameZoneTypography.bodyMedium.copyWith(
+                            color: GameZoneColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: GameZoneSpacing.sm),
-                Text(
-                  game.title,
-                  style: GameZoneTypography.headlineSmall.copyWith(
-                    color: GameZoneColors.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (game.progress > 0) ...[
-                  const SizedBox(height: GameZoneSpacing.sm),
-                  _buildProgressBar(game.progress),
-                ],
+                const SizedBox(height: GameZoneSpacing.md),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressBar(double progress) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Progresso',
-              style: GameZoneTypography.labelSmall.copyWith(
-                color: GameZoneColors.textMuted,
-              ),
-            ),
-            Text(
-              '${(progress * 100).toInt()}%',
-              style: GameZoneTypography.labelSmall.copyWith(
-                color: GameZoneColors.accentCoral,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
-        const SizedBox(height: GameZoneSpacing.xs),
-        Container(
-          height: 4,
-          decoration: BoxDecoration(
-            color: GameZoneColors.border,
-            borderRadius: BorderRadius.circular(GameZoneRadius.full),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: GameZoneColors.coralGradient,
-                borderRadius: BorderRadius.circular(GameZoneRadius.full),
-              ),
+        // Games List
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: GameZoneSpacing.lg),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final game = games[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: GameZoneSpacing.md),
+                  child: GameStoreCard(
+                    key: ValueKey(game.id),
+                    game: game,
+                    ownerName: 'Usuário',
+                    onBuy: () => onBuy(context, game),
+                  ),
+                );
+              },
+              childCount: games.length,
             ),
           ),
         ),
       ],
     );
   }
-}
-
-class _GameItem {
-  final String title;
-  final String genre;
-  final String imagePath;
-  final double progress;
-
-  const _GameItem(this.title, this.genre, this.imagePath, this.progress);
 }
 
 class ProfileTab extends StatefulWidget {
