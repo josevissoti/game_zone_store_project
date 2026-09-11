@@ -383,10 +383,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
       slivers: [
         // Hero Section with GameZone branding
         GameZoneHeroHeader(
-          collapsedTitle: 'Olá, ${widget.firstName}!',
-          collapsedSubtitle: 'Sua loja de jogos',
-          expandedTagline: 'Descubra os melhores jogos',
-          expandedHeight: 160,
+          height: 108,
         ),
         // Search Filter
         SliverToBoxAdapter(

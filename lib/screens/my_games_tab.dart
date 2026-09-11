@@ -165,10 +165,7 @@ class _MyGamesTabState extends State<MyGamesTab> {
 
   Widget _buildHeroSection(UserModel userModel) {
     return GameZoneHeroHeader(
-      collapsedTitle: 'Meus Jogos',
-      collapsedSubtitle: 'Sua biblioteca pessoal de jogos',
-      expandedTagline: 'Sua biblioteca pessoal de jogos',
-      expandedHeight: 180,
+      height: 108,
       trailing: StreamBuilder<List<GameModel>>(
         stream: widget.gameService.watchGamesByUser(userModel.uid),
         builder: (context, snapshot) {
